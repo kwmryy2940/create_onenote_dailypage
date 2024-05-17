@@ -40,17 +40,28 @@ function isStartedProcess() {
   }
 }
 
+function disposeComObject($OneNote) {
+  # Dispose COM object
+  [System.Runtime.InteropServices.Marshal]::ReleaseComObject($OneNote) | Out-Null
+}
 
 # Main process==========================================================================================
+
+$ConfigPath = "./config.ini"
+$Param = @{}
+Get-Content $ConfigPath | % { $Param += ConvertFrom-StringData $_ }
+
+$SectionName = $PARAM.SECTION_NAME
 
 # Initialize
 $OneNote = New-Object -ComObject OneNote.Application
 Add-Type -assembly Microsoft.Office.Interop.OneNote
 Add-Type -AssemblyName System.Xml.Linq
 
+  
 $OneNoteID = ""
 [xml]$Hierarchy = ""
-
+  
 # Get OneNote hierarcy structure
 $OneNote.GetHierarchy(
   $OneNoteID,
@@ -58,28 +69,30 @@ $OneNote.GetHierarchy(
   [ref]$Hierarchy,
   [Microsoft.Office.InterOp.OneNote.XMLSchema]::xsCurrent)
 $HierarchyItem = getHierarchyItem $Hierarchy
-
+    
 # Get disignated section id
-[string]$SectionID = ($HierarchyItem | Where-Object { $_.name -eq 'Memo' }).ID
-
+[string]$SectionID = ($HierarchyItem | Where-Object { $_.name -eq $SectionName }).ID
+    
 if ($null -eq $SectionID) {
-
+      
   Write-Error 'Section ID is not found'
+  disposeComObject $OneNote
   Pause
   return
 }
-
+    
 # Check today's page has been already created
 $date = Get-Date -Format "yyyy-MM-dd"
 $TodaysPage = ($HierarchyItem | Where-Object { $_.name -eq $date })
-
+    
 # Today's page wad already created
 if (($null -ne $TodaysPage)) {
   Write-Error "Today's page wad already created."
+  disposeComObject $OneNote
   Pause
   return
 }
-
+    
 # Create page to disignated section
 $pbstrPageID = ""
 $OneNote.CreateNewPage(
@@ -97,6 +110,7 @@ $xDoc = [System.Xml.Linq.XDocument]::Parse($NewPageXML.Value)
 $title = $xDoc.Descendants() | Where-Object -Property Name -Like -Value '*}T'
 if (-not $title) {
   Write-Error 'Error: can not find title element'
+  disposeComObject $OneNote
   Pause
   return
 }
@@ -108,7 +122,8 @@ $title.Value = "$date"
 $onenote.UpdatePageContent($xDoc.ToString())
 
 # Dispose COM object
-[System.Runtime.InteropServices.Marshal]::ReleaseComObject($OneNote) | Out-Null
+# [System.Runtime.InteropServices.Marshal]::ReleaseComObject($OneNote) | Out-Null
+disposeComObject $OneNote
 
 Start-Sleep -s 1
 
