@@ -122,7 +122,6 @@ $title.Value = "$date"
 $onenote.UpdatePageContent($xDoc.ToString())
 
 # Dispose COM object
-# [System.Runtime.InteropServices.Marshal]::ReleaseComObject($OneNote) | Out-Null
 disposeComObject $OneNote
 
 Start-Sleep -s 1
