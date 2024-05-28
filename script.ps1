@@ -87,9 +87,7 @@ $TodaysPage = ($HierarchyItem | Where-Object { $_.name -eq $date })
     
 # Today's page wad already created
 if (($null -ne $TodaysPage)) {
-  Write-Error "Today's page wad already created."
   disposeComObject $OneNote
-  Pause
   return
 }
     
